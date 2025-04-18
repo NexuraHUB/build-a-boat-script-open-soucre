@@ -1,0 +1,217 @@
+task.wait(1)
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+
+local player = Players.LocalPlayer
+local character = player.Character or player.CharacterAdded:Wait()
+local hrp = character:WaitForChild("HumanoidRootPart")
+
+local isTeleporting = false
+local autoTPEnabled = false  -- ถ้า true ให้ทำงานวนไปเรื่อย ๆ ถ้า false ให้หยุดทันที
+local bodyPosition = nil
+local currentStage = 1
+
+local function getCaveStages()
+    local caveStages = {}
+    for i = 1, 10 do
+        local stage = game.Workspace.BoatStages.NormalStages:FindFirstChild("CaveStage" .. i)
+        if stage and stage:FindFirstChild("DarknessPart") then
+            table.insert(caveStages, stage.DarknessPart)
+        end
+    end
+    return caveStages
+end
+
+local caveStages = getCaveStages()
+
+local function enableBodyPosition()
+    if not bodyPosition then
+        bodyPosition = Instance.new("BodyPosition")
+        bodyPosition.MaxForce = Vector3.new(50000, 50000, 50000)
+        bodyPosition.D = 10000000
+        bodyPosition.P = 10000000
+        bodyPosition.Position = hrp.Position
+        bodyPosition.Parent = hrp
+    end
+end
+
+local function disableBodyPosition()
+    if bodyPosition then
+        bodyPosition:Destroy()
+        bodyPosition = nil
+    end
+end
+
+local function teleportSmoothly(targetPart)
+    if not targetPart then return end
+    local startPos = hrp.Position
+    local step = 0
+    
+    while step < 1 and isTeleporting and autoTPEnabled do
+        step = step + RunService.RenderStepped:Wait() * 2
+        local targetPos = targetPart.Position + Vector3.new(0, 5, 0)
+        hrp.CFrame = CFrame.new(startPos:Lerp(targetPos, step))
+    end
+end
+task.wait(0.5)
+
+local function teleportToEnd()
+    local capTrigger = game.Workspace.BoatStages.NormalStages.TheEnd.GoldenChest:FindFirstChild("Trigger")
+    if capTrigger and autoTPEnabled then
+        teleportSmoothly(capTrigger)
+    end
+end
+
+local function startAutoTP()
+    if isTeleporting then return end
+    isTeleporting = true
+    enableBodyPosition()
+
+    currentStage = 1
+    
+    while autoTPEnabled and currentStage <= #caveStages do
+        teleportSmoothly(caveStages[currentStage])
+        currentStage = currentStage + 1
+        wait(0.7)
+    end
+    if autoTPEnabled then
+        teleportToEnd()
+                wait(0.5)
+                teleportToEnd()
+    end
+
+    disableBodyPosition()
+    isTeleporting = false
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.ResetOnSpawn = false
+screenGui.Parent = player:WaitForChild("PlayerGui")
+
+local menuToggleButton = Instance.new("TextButton")
+menuToggleButton.Size = UDim2.new(0, 100, 0, 40)
+menuToggleButton.Position = UDim2.new(0, 10, 0, 10)
+menuToggleButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+menuToggleButton.BorderSizePixel = 2
+menuToggleButton.Text = "Menu"
+menuToggleButton.Font = Enum.Font.SourceSansBold
+menuToggleButton.TextSize = 24
+menuToggleButton.TextColor3 = Color3.new(1, 1, 1)
+menuToggleButton.Parent = screenGui
+
+local menuToggleCorner = Instance.new("UICorner")
+menuToggleCorner.CornerRadius = UDim.new(0, 10)
+menuToggleCorner.Parent = menuToggleButton
+
+local menuFrame = Instance.new("Frame")
+menuFrame.Size = UDim2.new(0, 320, 0, 200)
+menuFrame.Position = UDim2.new(0, 10, 0, 60)
+menuFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+menuFrame.BorderSizePixel = 2
+menuFrame.Visible = false
+menuFrame.Parent = screenGui
+menuFrame.Active = true
+menuFrame.Draggable = true
+
+local menuFrameCorner = Instance.new("UICorner")
+menuFrameCorner.CornerRadius = UDim.new(0, 10)
+menuFrameCorner.Parent = menuFrame
+
+local titleLabel = Instance.new("TextLabel")
+titleLabel.Size = UDim2.new(1, 0, 0, 40)
+titleLabel.BackgroundTransparency = 1
+titleLabel.Text = "nexura"
+titleLabel.Font = Enum.Font.SourceSansBold
+titleLabel.TextSize = 26
+titleLabel.TextColor3 = Color3.new(20, 211, 158)
+titleLabel.Parent = menuFrame
+
+local toggleLabel = Instance.new("TextLabel")
+toggleLabel.Size = UDim2.new(0.7, 0, 0, 30)
+toggleLabel.Position = UDim2.new(0, 10, 0, 60)
+toggleLabel.BackgroundTransparency = 1
+toggleLabel.Text = "autofarm"
+toggleLabel.Font = Enum.Font.SourceSans
+toggleLabel.TextSize = 22
+toggleLabel.TextColor3 = Color3.new(1, 1, 1)
+toggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+toggleLabel.Parent = menuFrame
+
+local toggleBox = Instance.new("TextButton")
+toggleBox.Size = UDim2.new(0, 60, 0, 30)
+toggleBox.Position = UDim2.new(0.7, 10, 0, 60)
+toggleBox.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+toggleBox.Text = "OFF"
+toggleBox.Font = Enum.Font.SourceSansBold
+toggleBox.TextSize = 22
+toggleBox.TextColor3 = Color3.new(0, 0, 0)
+toggleBox.Parent = menuFrame
+
+local toggleBoxCorner = Instance.new("UICorner")
+toggleBoxCorner.CornerRadius = UDim.new(0, 10)
+toggleBoxCorner.Parent = toggleBox
+
+toggleBox.MouseButton1Click:Connect(function()
+    autoTPEnabled = not autoTPEnabled
+    if autoTPEnabled then
+        toggleBox.Text = "ON"
+        toggleBox.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        if not isTeleporting then
+            startAutoTP()
+        end
+    else
+        toggleBox.Text = "OFF"
+        toggleBox.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+    end
+end)
+
+local destroyButton = Instance.new("TextButton")
+destroyButton.Size = UDim2.new(1, -20, 0, 25)
+destroyButton.Position = UDim2.new(0, 10, 1.1, -50)
+destroyButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
+destroyButton.Text = "Destroy GUI"
+destroyButton.Font = Enum.Font.SourceSansBold
+destroyButton.TextSize = 24
+destroyButton.TextColor3 = Color3.new(1, 1, 1)
+destroyButton.Parent = menuFrame
+
+local destroyButtonCorner = Instance.new("UICorner")
+destroyButtonCorner.CornerRadius = UDim.new(0, 10)
+destroyButtonCorner.Parent = destroyButton
+
+destroyButton.MouseButton1Click:Connect(function()
+    autoTPEnabled = false  
+    screenGui:Destroy()    
+end)
+
+local menuOpen = false
+menuToggleButton.MouseButton1Click:Connect(function()
+    menuOpen = not menuOpen
+    menuFrame.Visible = menuOpen
+end)
+
+player.CharacterAdded:Connect(function(newCharacter)
+    -- ก่อนเริ่มใหม่ ให้ลบ BodyPosition เก่าก่อน
+    disableBodyPosition()
+    character = newCharacter
+    hrp = character:WaitForChild("HumanoidRootPart")
+    currentStage = 1
+    task.wait(0.7) --fix body position bug i dk how it work :p
+    if autoTPEnabled and not isTeleporting then
+        startAutoTP()
+    end
+end)
+
+local function checkPlayerHealth()
+    local humanoid = character:WaitForChild("Humanoid")
+    humanoid.Died:Connect(function()
+      
+        currentStage = 1
+        task.wait(1)
+        if autoTPEnabled and not isTeleporting then
+            startAutoTP()
+
+        end
+    end)
+end
+checkPlayerHealth()
