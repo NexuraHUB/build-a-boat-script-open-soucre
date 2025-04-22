@@ -7,9 +7,12 @@ local character = player.Character or player.CharacterAdded:Wait()
 local hrp = character:WaitForChild("HumanoidRootPart")
 
 local isTeleporting = false
-local autoTPEnabled = false  -- ถ้า true ให้ทำงานวนไปเรื่อย ๆ ถ้า false ให้หยุดทันที
+local autoTPEnabled = false  
 local bodyPosition = nil
 local currentStage = 1
+
+local vu = game:GetService("VirtualUser")
+local isAntiAFKEnabled = false
 
 local function getCaveStages()
     local caveStages = {}
@@ -27,9 +30,9 @@ local caveStages = getCaveStages()
 local function enableBodyPosition()
     if not bodyPosition then
         bodyPosition = Instance.new("BodyPosition")
-        bodyPosition.MaxForce = Vector3.new(50000, 50000, 50000)
-        bodyPosition.D = 10000000
-        bodyPosition.P = 10000000
+        bodyPosition.MaxForce = Vector3.new(1e+1000, 1e+1000, 1e+1000)
+        bodyPosition.D = 1e+5
+        bodyPosition.P = 1e+5
         bodyPosition.Position = hrp.Position
         bodyPosition.Parent = hrp
     end
@@ -48,17 +51,29 @@ local function teleportSmoothly(targetPart)
     local step = 0
     
     while step < 1 and isTeleporting and autoTPEnabled do
-        step = step + RunService.RenderStepped:Wait() * 2
-        local targetPos = targetPart.Position + Vector3.new(0, 30, 0)
+        step = step + RunService.RenderStepped:Wait() * 1.3
+        local targetPos = targetPart.Position + Vector3.new(0, 25, 0)
+        hrp.CFrame = CFrame.new(startPos:Lerp(targetPos, step))
+    end
+end
+task.wait(0.1)
+
+local function teleportSmoothly2(targetPart)
+    if not targetPart then return end
+    local startPos = hrp.Position
+    local step = 0
+    
+    while step < 1 and isTeleporting and autoTPEnabled do
+        step = step + RunService.RenderStepped:Wait() * 3
+        local targetPos = targetPart.Position + Vector3.new(5, 4, 0)
         hrp.CFrame = CFrame.new(startPos:Lerp(targetPos, step))
     end
 end
 task.wait(0.5)
-
 local function teleportToEnd()
     local capTrigger = game.Workspace.BoatStages.NormalStages.TheEnd.GoldenChest:FindFirstChild("Trigger")
     if capTrigger and autoTPEnabled then
-        teleportSmoothly(capTrigger)
+        teleportSmoothly2(capTrigger)
     end
 end
 
@@ -72,16 +87,31 @@ local function startAutoTP()
     while autoTPEnabled and currentStage <= #caveStages do
         teleportSmoothly(caveStages[currentStage])
         currentStage = currentStage + 1
-        wait(0.7)
+        task.wait(0.1)
     end
     if autoTPEnabled then
         teleportToEnd()
-                wait(0.5)
+                task.wait(0.1)
                 teleportToEnd()
     end
 
     disableBodyPosition()
     isTeleporting = false
+end
+
+function AntiAFK(enabled)
+    if enabled then
+        -- เชื่อมต่อการหลอกการ Idle
+        Players.LocalPlayer.Idled:Connect(function()
+            vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            wait(1)
+            vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
+            print("✅ Anti-AFK is active!")
+        end)
+        print("🟢 Anti-AFK Enabled")
+    else
+        print("🔴 Anti-AFK Disabled")
+    end
 end
 
 local screenGui = Instance.new("ScreenGui")
@@ -165,6 +195,44 @@ toggleBox.MouseButton1Click:Connect(function()
     end
 end)
 
+local antiAFKToggleLabel = Instance.new("TextLabel")
+antiAFKToggleLabel.Size = UDim2.new(0.7, 0, 0, 30)
+antiAFKToggleLabel.Position = UDim2.new(0, 10, 0, 100)
+antiAFKToggleLabel.BackgroundTransparency = 1
+antiAFKToggleLabel.Text = "Anti-AFK"
+antiAFKToggleLabel.Font = Enum.Font.SourceSans
+antiAFKToggleLabel.TextSize = 22
+antiAFKToggleLabel.TextColor3 = Color3.new(1, 1, 1)
+antiAFKToggleLabel.TextXAlignment = Enum.TextXAlignment.Left
+antiAFKToggleLabel.Parent = menuFrame
+
+local antiAFKToggleBox = Instance.new("TextButton")
+antiAFKToggleBox.Size = UDim2.new(0, 60, 0, 30)
+antiAFKToggleBox.Position = UDim2.new(0.7, 10, 0, 100)
+antiAFKToggleBox.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+antiAFKToggleBox.Text = "OFF"
+antiAFKToggleBox.Font = Enum.Font.SourceSansBold
+antiAFKToggleBox.TextSize = 22
+antiAFKToggleBox.TextColor3 = Color3.new(0, 0, 0)
+antiAFKToggleBox.Parent = menuFrame
+
+local antiAFKToggleBoxCorner = Instance.new("UICorner")
+antiAFKToggleBoxCorner.CornerRadius = UDim.new(0, 10)
+antiAFKToggleBoxCorner.Parent = antiAFKToggleBox
+
+antiAFKToggleBox.MouseButton1Click:Connect(function()
+    isAntiAFKEnabled = not isAntiAFKEnabled
+    if isAntiAFKEnabled then
+        antiAFKToggleBox.Text = "ON"
+        antiAFKToggleBox.BackgroundColor3 = Color3.fromRGB(0, 255, 0)
+        AntiAFK(true)
+    else
+        antiAFKToggleBox.Text = "OFF"
+        antiAFKToggleBox.BackgroundColor3 = Color3.fromRGB(200, 200, 200)
+        AntiAFK(false)
+    end
+end)
+
 local destroyButton = Instance.new("TextButton")
 destroyButton.Size = UDim2.new(1, -20, 0, 25)
 destroyButton.Position = UDim2.new(0, 10, 1.1, -50)
@@ -191,7 +259,7 @@ menuToggleButton.MouseButton1Click:Connect(function()
 end)
 
 player.CharacterAdded:Connect(function(newCharacter)
-    -- ก่อนเริ่มใหม่ ให้ลบ BodyPosition เก่าก่อน
+    
     disableBodyPosition()
     character = newCharacter
     hrp = character:WaitForChild("HumanoidRootPart")
@@ -207,7 +275,7 @@ local function checkPlayerHealth()
     humanoid.Died:Connect(function()
       
         currentStage = 1
-        task.wait(1)
+        task.wait(0.1)
         if autoTPEnabled and not isTeleporting then
             startAutoTP()
 
