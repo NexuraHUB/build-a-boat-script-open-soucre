@@ -1,4 +1,4 @@
-task.wait(1)
+task.wait(0.1) --i dun know y i add it 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
@@ -11,18 +11,18 @@ local autoTPEnabled = false
 local bodyPosition = nil
 local currentStage = 1
 
-local vu = game:GetService("VirtualUser")
+local vu = game:GetService("VirtualUser") --for afk function
 local isAntiAFKEnabled = false
 
 local function getCaveStages()
-    local caveStages = {}
+    local caveStages = {} --store info
     for i = 1, 10 do
         local stage = game.Workspace.BoatStages.NormalStages:FindFirstChild("CaveStage" .. i)
         if stage and stage:FindFirstChild("DarknessPart") then
             table.insert(caveStages, stage.DarknessPart)
         end
     end
-    return caveStages
+    return caveStages --send info
 end
 
 local caveStages = getCaveStages()
@@ -65,7 +65,7 @@ local function teleportSmoothly2(targetPart)
     
     while step < 1 and isTeleporting and autoTPEnabled do
         step = step + RunService.RenderStepped:Wait() * 3
-        local targetPos = targetPart.Position + Vector3.new(0, 15, -3)
+        local targetPos = targetPart.Position + Vector3.new(0, 2, -3)
         hrp.CFrame = CFrame.new(startPos:Lerp(targetPos, step))
     end
 end
@@ -101,12 +101,11 @@ end
 
 function AntiAFK(enabled)
     if enabled then
-        -- เชื่อมต่อการหลอกการ Idle
         Players.LocalPlayer.Idled:Connect(function()
             vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
             wait(1)
             vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-            print("ping from Anti-AFK")
+            warn("ping from Anti-AFK")
         end)
         print("🟢 Anti-AFK Enabled")
     else
