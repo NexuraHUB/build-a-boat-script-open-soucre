@@ -65,7 +65,7 @@ local function teleportSmoothly2(targetPart)
     
     while step < 1 and isTeleporting and autoTPEnabled do
         step = step + RunService.RenderStepped:Wait() * 3
-        local targetPos = targetPart.Position + Vector3.new(5, 4, 0)
+        local targetPos = targetPart.Position + Vector3.new(7, 15, 0)
         hrp.CFrame = CFrame.new(startPos:Lerp(targetPos, step))
     end
 end
@@ -106,7 +106,7 @@ function AntiAFK(enabled)
             vu:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
             wait(1)
             vu:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
-            print("✅ Anti-AFK is active!")
+            print("ping from Anti-AFK")
         end)
         print("🟢 Anti-AFK Enabled")
     else
