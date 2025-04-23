@@ -65,7 +65,7 @@ local function teleportSmoothly2(targetPart)
     
     while step < 1 and isTeleporting and autoTPEnabled do
         step = step + RunService.RenderStepped:Wait() * 3
-        local targetPos = targetPart.Position + Vector3.new(7, 15, 0)
+        local targetPos = targetPart.Position + Vector3.new(0, 15, -3)
         hrp.CFrame = CFrame.new(startPos:Lerp(targetPos, step))
     end
 end
